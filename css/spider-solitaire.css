@@ -1,0 +1,7 @@
+﻿/* just classes for spidersolitaire and embedded objects */
+.spidersolitaire {font-family:Verdana,sans-serif;margin:0;background-color:#008800;min-height:100%;width:100%;position:relative;}
+.spidersolitaire div form {width:148px;margin:20px 10px;height:96px;position:absolute;}
+.spidersolitaire div form input {width:45%;margin-bottom:3px;height:45%;}
+.spidersolitaire .card, .base {position:absolute;height:96px;width:71px;}
+.spidersolitaire .card.clicked {border: 2px solid blue;border-radius: 6px;margin:-2px;}
+.ssParent {margin:0px;}
