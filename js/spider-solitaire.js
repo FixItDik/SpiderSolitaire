@@ -742,7 +742,7 @@ jQuery(function($) {
             $('#imageLoader').css('background-image', 'url(images/card_' + tmpCard.suit + tmpCard.value + '.gif)');
             ssObj.initCard++;
             if (ssObj.initCard < ssObj.deck.length) {
-                setTimeout(ssObj.loadImages, 1);
+                setTimeout(ssObj.loadImages, 30);
             }
             // else could remove the div here
         };
