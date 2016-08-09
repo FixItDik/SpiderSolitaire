@@ -71,6 +71,8 @@ jQuery(function($) {
             ssDiv.attr('draggable','false');
             ssObj.initHandlers(ssDiv);
             ssObj.newGame();
+            ssObj.initCard = 0;
+            setTimeout(ssObj.loadImages, 1);
         };
 
 
@@ -729,6 +731,21 @@ jQuery(function($) {
             }
         };
 
+
+        // load next image until whole deck has been loaded
+        // this saves delay when image first appears on browser
+        this.loadImages = function () {
+            if (ssObj.initCard == 0) {
+                $('#workspace').append('<div id="imageLoader" style="display:none;"/>');
+            }
+            var tmpCard = ssObj.deck[ssObj.initCard];
+            $('#imageLoader').css('background-image', 'url(images/card_' + tmpCard.suit + tmpCard.value + '.gif)');
+            ssObj.initCard++;
+            if (ssObj.initCard < ssObj.deck.length) {
+                setTimeout(ssObj.loadImages, 1);
+            }
+            // else could remove the div here
+        };
 
         //replace window alert with jQuery dialog
         this.alert = function (someHTML) {
