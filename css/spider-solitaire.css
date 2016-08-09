@@ -1,12 +1,12 @@
 ﻿/* just classes for spidersolitaire and embedded objects */
 .ssParent {margin:0px;}
 
-.spidersolitaire {font-family:Verdana,sans-serif;margin:auto;background-color:#008800;min-height:100vh;width:100%;position:relative;width:1005px;min-height:535px;}
+.spidersolitaire {font-family:Verdana,sans-serif;margin:auto;height:100vh;width:100%;position:relative;width:1005px;min-height:535px;}
 .spidersolitaire div {display:inline-block}
 .spidersolitaire div form {width:144px;height:96px;display:inline-block;text-align:center;}
 .spidersolitaire div form input {width:45%;margin-bottom:3px;margin-right:3px;height:45%;}
 .spidersolitaire #workspace {padding:20px;width:150px;vertical-align:top;background-color:#807000;height:calc(100% - 40px);min-height:535px;}
-.spidersolitaire #table {padding:20px 20px 0 20px;}
+.spidersolitaire #table {padding:20px;min-height:535px;height:100%;background-color:#008800;}
 
 .spidersolitaire .base {width:71px;min-height:96px;background-image:url(../images/card_pos.gif);position:relative;background-repeat:no-repeat;}
 .spidersolitaire .home {height:96px;}
@@ -18,4 +18,4 @@
 .spidersolitaire .card {height:96px;width:71px;background-image:url(../images/card_back.gif);}
 .spidersolitaire .card.clicked {border: 2px solid blue;border-radius: 6px;margin:-2px;}
 
-.card:first-child {margin-top:0 !important;}
+.spidersolitaire .card:first-child {margin-top:0 !important;}
