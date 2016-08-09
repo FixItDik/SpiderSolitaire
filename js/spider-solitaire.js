@@ -199,7 +199,7 @@ jQuery(function($) {
                 target.append(base.replace('%top%', ssObj.baseTop)
                     .replace('%id%', home)
                     .replace('%left%', ((home + 2) * (ssObj.cardWidth + ssObj.cardPadding)) + 10)
-                    .replace('%zindex%', 0)
+                    .replace('%zindex%', -1)
                     );
             }
             target = $('#table');
@@ -208,7 +208,7 @@ jQuery(function($) {
                 target.append(base
                     .replace('%id%', stack)
                     .replace('%top%', ssObj.pileTop)
-                    .replace('%zindex%', 0)
+                    .replace('%zindex%', -1)
                     );
             }
 
@@ -418,7 +418,6 @@ jQuery(function($) {
                 ssObj.checkAndDoRemove();
                 ssObj.respaceCards();
                 ssObj.setDraggableCards();
-                ssObj.clearSelection()
                 result = true;
             }
             return result;
