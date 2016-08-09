@@ -418,7 +418,6 @@ jQuery(function($) {
                 ssObj.checkAndDoRemove();
                 ssObj.respaceCards();
                 ssObj.setDraggableCards();
-                ssObj.clearSelection()
                 result = true;
             }
             return result;
