@@ -36,13 +36,17 @@ jQuery(function($) {
         ssObj.moves = [];
         ssObj.piles = [];
         ssObj.deck = [];
+        
         for (var stack = 0; stack < 18; stack++) {
             ssObj.piles[stack] = [];
         }
-        ssObj.score = 0;
-        ssObj.baseTop = 0;
-        ssObj.pileTop = 0;
-
+        
+        ssObj.playerName = '';
+        ssObj.highScores = [];
+        ssObj.scoresToKeep = 10;
+        ssObj.score = 500;
+        ssObj.moveCount = 0;
+        
         // these are used to calculate card spacing in tall piles
         // using variables so you can change card dimensions etc if you want
         ssObj.cardHeight = 96;
@@ -96,7 +100,6 @@ jQuery(function($) {
 
             // if they resize the window (or rotate their device)
             $(window).resize( function (event) {
-                //ssObj.maxHeight = ($('.ssParent')[0].clientHeight - ssObj.tablePadding) > ssObj.minHeight ? ($('.ssParent')[0].clientHeight - ssObj.tablePadding) : ssObj.minHeight;
                 ssObj.respaceCards();
             });
 
@@ -201,9 +204,8 @@ jQuery(function($) {
             var target = $('#workspace');
             var base = ssObj.getTemplate('home-base');
             for (var home = 0; home < 8; home++) {
-                target.append(base.replace('%top%', ssObj.baseTop)
+                target.append(base
                     .replace('%id%', home)
-                    .replace('%left%', ((home + 2) * (ssObj.cardWidth + ssObj.cardPadding)) + 10)
                     .replace('%zindex%', 0)
                     );
             }
@@ -212,7 +214,6 @@ jQuery(function($) {
             for (var stack = 0; stack < 10; stack++) {
                 target.append(base
                     .replace('%id%', stack)
-                    .replace('%top%', ssObj.pileTop)
                     .replace('%zindex%', 0)
                     );
             }
@@ -236,7 +237,8 @@ jQuery(function($) {
                 for (var card = 0; card < ssObj.piles[stack].length; card++) {
                     var thisCard = ssObj.piles[stack][card];
                     var cardCode = thisCard.facingUp ? cardFaceCode : cardBackCode;
-                    target.append(cardCode.replace(/%id%/g, thisCard.id)
+                    target.append(cardCode
+                        .replace(/%id%/g, thisCard.id)
                         .replace('%zindex%', card)
                         .replace('%dropFunction%', '')
                         .replace('%dropClass%', '')
@@ -251,7 +253,8 @@ jQuery(function($) {
                 for (var card = 0; card < ssObj.piles[stack].length; card++) {
                     var thisCard = ssObj.piles[stack][card];
                     var cardCode = thisCard.facingUp ? cardFaceCode : cardBackCode;
-                    target.append(cardCode.replace(/%id%/g, thisCard.id)
+                    target.append(cardCode
+                        .replace(/%id%/g, thisCard.id)
                         .replace('%zindex%', (thisCard.facingUp ? 200 : card))
                         .replace('%dropFunction%', 'event.preventDefault();')
                         .replace('%dropClass%', 'canDrop')
@@ -260,8 +263,11 @@ jQuery(function($) {
                     id++;
                 }
             }
-            ssObj.respaceCards();
-            ssObj.setDraggableCards();
+            if (ssObj.compacted) {
+                ssObj.compacted = !ssObj.compacted;
+                ssObj.compact();
+            }
+            ssObj.refreshTable();
         };
 
 
@@ -284,9 +290,9 @@ jQuery(function($) {
                 }
                 $('#Deal').prop('disabled', eval(stack == -1));
 
-                $('#Undo').prop('disabled', eval(ssObj.moves.length > 0));
-
                 ssObj.playing = (ssObj.piles[0].length != 13); // may have loaded a completed game
+
+                $('#Undo').prop('disabled', (!ssObj.playing || (ssObj.moves.length == 0)));
 
             } else {
                 // make sure we clear any previous game
@@ -385,8 +391,7 @@ jQuery(function($) {
 
                 ssObj.recordMove(-1, stack, -1, -1);
                 ssObj.checkAndDoRemove();
-                ssObj.respaceCards();
-                ssObj.setDraggableCards();
+                ssObj.refreshTable();
                 if (stack == 0) {
                     $('#Deal').prop('disabled', true);
                 }
@@ -421,8 +426,7 @@ jQuery(function($) {
                 }
                 ssObj.recordMove(onthemove.id, sourcePile.result, targetPile.result, resultedInTurn);
                 ssObj.checkAndDoRemove();
-                ssObj.respaceCards();
-                ssObj.setDraggableCards();
+                ssObj.refreshTable();
                 result = true;
             }
             return result;
@@ -488,8 +492,8 @@ jQuery(function($) {
                     ssObj.piles[thisMove.sourcePile] = ssObj.piles[thisMove.sourcePile].concat(hand);
 
                 }
-                ssObj.respaceCards();
-                ssObj.setDraggableCards();
+                ssObj.score--;
+                ssObj.refreshTable();
                 // save the current status in case they close window
                 ssObj.saveGame();
             } else {
@@ -501,10 +505,9 @@ jQuery(function($) {
         // catch ctrl-z as undo
         this.keyPress = function (ev) {
             try {
-                // chrome returns 26 for z, FireFox returns 122 or 90 if caps-lock on
-                if (ev.ctrlKey && ((ev.key == 'z') ||(ev.keyCode == 90)) && ssObj.moves.length > 0) {
+                if (ev.ctrlKey && ((ev.key.toLowerCase() == 'z') ||(ev.keyCode == 90)) && ssObj.moves.length > 0) {
                     ssObj.undo();
-                } else if (ev.key == 'Escape' || ev.keyCode == 27) {
+                } else if (ev.key.toLowerCase() == 'escape' || ev.keyCode == 27) {
                     ssObj.hide();
                 }
             } catch (ex) {}
@@ -516,7 +519,15 @@ jQuery(function($) {
         // display the Menu (placeholder at moment)
         this.menu = function () {
             //@@todo change this in to a form also showing high scores etc
-            ssObj.alert(ssObj.getTemplate('menu'));
+            var message = ssObj.getTemplate('menu');
+            var scores = ssObj.getTemplate('score');
+            var tmp = '';
+            for (var index=0; index < ssObj.highScores.length; index++) {
+                tmp += scores.replace('%score%', ssObj.highScores[index].score)
+                            .replace('%date%', ('' + ssObj.highScores[index].date).substr(0,10))
+                            .replace('%name%', ssObj.highScores[index].player);
+            }
+            ssObj.alert(message.replace('%scores%', tmp));     
         };
 
 
@@ -525,6 +536,7 @@ jQuery(function($) {
             if (ssObj.compacted == true) {
                 $(document.body).removeClass('sscompact');
                 ssObj.compacted = false;
+                $('#Just').attr('value', 'Compact');
             } else {
                 $(document.body).addClass('sscompact');
                 $('#spidersolitaire *, #spidersolitaire').addClass('ssexceptme');
@@ -534,17 +546,20 @@ jQuery(function($) {
                     e = e.parent();
                 }
                 ssObj.compacted = true;
+                $('#Just').attr('value', 'Whole');
             }
         };
 
 
-        // hide everything except the game
+        // hide everything except the buttons
         this.hide = function () {
             if (ssObj.hidden == true) {
                 $('.spidersolitaire').removeClass('sshide');
+                $('#Hide').attr('value', 'Hide');
                 ssObj.hidden = false;
             } else {
                 $('.spidersolitaire').addClass('sshide');
+                $('#Hide').attr('value', 'Show');
                 ssObj.hidden = true;
             }
         }
@@ -557,6 +572,10 @@ jQuery(function($) {
         // just add another move to the stack
         this.recordMove = function (cardId, sourcePile, targetPile, resultedInTurn) {
             ssObj.playing = true;
+            if (cardId >= 0) {
+                ssObj.score--;
+            }
+            
             ssObj.moves.push({cardId: cardId, sourcePile: sourcePile, targetPile: targetPile, resultedInTurn: resultedInTurn});
             // save the current status in case they close window
             ssObj.saveGame();
@@ -600,6 +619,7 @@ jQuery(function($) {
                             $(t).append($('#' + card.id));
                         });
                         ssObj.piles[spareHome] = ssObj.piles[spareHome].concat(hand);
+                        ssObj.score += 100;
                         var turned = false;
                         if (ssObj.piles[stack].length > 0 && !ssObj.piles[stack][ssObj.piles[stack].length - 1].facingUp) {
                             ssObj.piles[stack][ssObj.piles[stack].length - 1].facingUp = true;
@@ -614,12 +634,40 @@ jQuery(function($) {
             }
 
             if (spareHome == -1) {
-                //@@todo ask them if they want to start a new game
-                //@@todo count every undo as a point off the score & adjust for deals & removes
-                ssObj.alert('Congratulations, you have finished, with a score of ' + eval(1300 - ssObj.moves.length));
+                ssObj.displayScore();
                 ssObj.playing = false;
                 ssObj.moves = [];
+                ssObj.highScoreCheck();
+                ssObj.saveGame();
+                //@@todo ask them if they want to start a new game
+                ssObj.alert('Congratulations, you have finished, with a score of ' + ssObj.score);
                 //@@todo record the high scores
+            }
+        };
+
+
+        // check if current score is a high score and if so add it to the top 10
+        this.highScoreCheck = function () {
+            if (ssObj.highScores.length == 0) {
+                ssObj.highScores.push({ score: ssObj.score,
+                                        date: new Date(),
+                                        player: ssObj.playerName
+                                        });
+            } else {
+                for (var index=0; index<ssObj.highScores.length; index++) {
+                    var highScore = ssObj.highScores[index];
+                    if (highScore.score < ssObj.score) {
+                        ssObj.highScores.splice(index, 0, { score: ssObj.score,
+                                        date: new Date(),
+                                        player: ssObj.playerName
+                                        });
+                        if (ssObj.highScores.length > ssObj.scoresToKeep) {
+                            ssObj.pop(); // remove last one
+                        }
+                        break;
+                    }
+                }
+                ssObj.highScores = JSON.parse(JSON.stringify(ssObj.highScores)); // ensures dates are in UTC format for displaying
             }
         };
 
@@ -658,6 +706,40 @@ jQuery(function($) {
         };
 
 
+        // simply un-click the card that is currently selected
+        this.unselectCurrentSelectedCard = function () {
+            $('#' + ssObj.cardSelected).removeClass('clicked');
+            ssObj.cardSelected = -1;
+        };
+
+
+        // ensure table is presented correctly
+        this.refreshTable = function () {
+            ssObj.respaceCards();
+            ssObj.setDraggableCards();
+            ssObj.displayScore();
+            ssObj.unselectCurrentSelectedCard();
+            $('#Undo').prop('disabled', (!ssObj.playing || (ssObj.moves.length == 0)));
+        };
+
+
+        // recalculate the card spacing for the piles based on visible area
+        this.respaceCards = function () {
+            //  calculate margin-top of every card (except first) in base as "height of base - (count * height of card)"
+            var baseStyling = '\nbody.sscompact *:not(.ssexceptme) {display:none;}\n';
+            var tableSize = $('#table')[0].clientHeight;
+            for (var stack = 0; stack < 10; stack++) {
+                var calcMargin = ssObj.maxCardSpacing - ssObj.cardHeight;
+                if (ssObj.piles[stack + 8].length > 1) {
+                    var calcSpacing = (tableSize - ssObj.cardHeight - 80) / (ssObj.piles[stack + 8].length - 1);
+                    calcMargin = calcSpacing > ssObj.maxCardSpacing ? (ssObj.maxCardSpacing - ssObj.cardHeight) : (calcSpacing - ssObj.cardHeight);
+                }
+                baseStyling += '.spidersolitaire #base_' + stack + ' .card {margin-top:' + calcMargin + 'px;}\n';
+            }
+            $('#customStyle').html(baseStyling);
+        };
+
+
         // set the attributes of the cards so only the draggable ones can be dragged
         this.setDraggableCards = function () {
             // iterate through each pile to see if cards can be dragged
@@ -689,33 +771,11 @@ jQuery(function($) {
 
             $('*').prop('draggable', false);
             $('.canDrag').prop('draggable', true)
-
-            // just a couple of extra actions it makes sense to do in here
-            ssObj.unselectCurrentSelectedCard();
-            $('#Undo').prop('disabled', (ssObj.moves.length == 0));
-        };
-
-        // simply un-click the card that is currently selected
-        this.unselectCurrentSelectedCard = function () {
-            $('#' + ssObj.cardSelected).removeClass('clicked');
-            ssObj.cardSelected = -1;
         };
 
 
-        // recalculate the card spacing for the piles based on visible area
-        this.respaceCards = function () {
-            //  calculate margin-top of every card (except first) in base as "height of base - (count * height of card)"
-            var baseStyling = '\nbody.sscompact *:not(.ssexceptme) {display:none;}\n';
-            var tableSize = $('#table')[0].clientHeight;
-            for (var stack = 0; stack < 10; stack++) {
-                var calcMargin = ssObj.maxCardSpacing - ssObj.cardHeight;
-                if (ssObj.piles[stack + 8].length > 1) {
-                    var calcSpacing = (tableSize - ssObj.cardHeight - 80) / (ssObj.piles[stack + 8].length - 1);
-                    calcMargin = calcSpacing > ssObj.maxCardSpacing ? (ssObj.maxCardSpacing - ssObj.cardHeight) : (calcSpacing - ssObj.cardHeight);
-                }
-                baseStyling += '.spidersolitaire #base_' + stack + ' .card {margin-top:' + calcMargin + 'px;}\n';
-            }
-            $('#customStyle').html(baseStyling);
+        this.displayScore = function () {
+            $('#ssScore').html('Score: ' + ssObj.score);
         };
 
 
@@ -726,6 +786,8 @@ jQuery(function($) {
                     localStorage.setItem('spidersolitaireMoves', JSON.stringify(ssObj.moves));
                     localStorage.setItem('spidersolitairePiles', JSON.stringify(ssObj.piles));
                     localStorage.setItem('spidersolitaireDeck', JSON.stringify(ssObj.deck));
+                    localStorage.setItem('spidersolitaireScore', JSON.stringify(ssObj.score));
+                    localStorage.setItem('spidersolitaireHighScores', JSON.stringify(ssObj.highScores));
                 } catch (ex) {
                     // just catch
                 }
@@ -734,6 +796,7 @@ jQuery(function($) {
 
 
         // read the game from localStorage (if supported)
+        // returns true if they were in the middle of a game
         this.readGame = function () {
             if (typeof(Storage) !== "undefined" && localStorage !== undefined) {
                 ssObj.usingstorage = true;
@@ -741,6 +804,8 @@ jQuery(function($) {
                     ssObj.deck = JSON.parse(localStorage.spidersolitaireDeck);
                     ssObj.piles = JSON.parse(localStorage.spidersolitairePiles);
                     ssObj.moves = JSON.parse(localStorage.spidersolitaireMoves);
+                    ssObj.score = JSON.parse(localStorage.spidersolitaireScore);
+                    ssObj.highScores = JSON.parse(localStorage.spidersolitaireHighScores);
                     return (localStorage.spidersolitaireMoves && localStorage.spidersolitairePiles && localStorage.spidersolitaireDeck);
                 } catch (ex) {
                     return false;
@@ -761,10 +826,20 @@ jQuery(function($) {
                     localStorage.removeItem('spidersolitaireMoves');
                     localStorage.removeItem('spidersolitairePiles');
                     localStorage.removeItem('spidersolitaireDeck');
+                    localStorage.removeItem('spidersolitaireScore');
                 } catch (ex) {
                     // just catch
                 }
             }
+        };
+
+
+        // reset the remembered high scores
+        this.resetHighScores = function () {
+            ssObj.highScores = [];
+            try {
+                localStorage.removeItem('spidersolitaireHighScores');
+            } catch (ex) {}
         };
 
 
@@ -786,6 +861,7 @@ jQuery(function($) {
         //replace window alert with jQuery dialog
         this.alert = function (someHTML) {
             $('<div>' + someHTML +'</div>').dialog({modal: true, title: "Spider Solitaire"});
+            $('.ui-dialog, .ui-dialog *').addClass('ssexceptme');
         };
 
 
@@ -807,8 +883,9 @@ jQuery(function($) {
                             '<input type="button" id="Deal" value="Deal" >' +
                             '<input type="button" id="Menu" value="Menu" >' +
                             '<input type="button" id="New" value="New" >' +
-                            '<input type="button" id="Just" value="Just" >' +
+                            '<input type="button" id="Just" value="Compact" >' +
                             '<input type="button" id="Hide" value="Hide" >' +
+                            '<span id="ssScore"/>' +
                         '</form>' +
                     '</div>' +
                     '<div id="table">' +
@@ -821,8 +898,10 @@ jQuery(function($) {
                     '<div id="base_%id%" class="base canDrop" style="z-index:%zindex%;" ondragover="event.preventDefault();"/>',
                 'home-base':
                     '<div id="home_%id%" class="base home" style="z-index:%zindex%;"/>',
+                'score':
+                    '<tr><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
                 'menu' :
-                    '<div class="menu">some text and info here, perhaps a form to set options</div>'
+                    '<div class="menu">Still working on this but here are the high scores:<br><table class="ssscores"><tr><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>'
             };
             return templates[templateName];
         };
