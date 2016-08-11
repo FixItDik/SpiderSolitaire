@@ -51,8 +51,7 @@ jQuery(function($) {
         ssObj.minHeight = 535;
         ssObj.tablePadding = 40;
 
-        ssObj.minCardSpacing = ssObj.cardHeight / 4;
-        ssObj.maxHeight = (document.body.clientHeight - ssObj.tablePadding) > ssObj.minHeight ? (document.body.clientHeight - ssObj.tablePadding) : ssObj.minHeight;
+        ssObj.maxCardSpacing = ssObj.cardHeight / 4;
 
 
         // initialise the object
@@ -87,13 +86,17 @@ jQuery(function($) {
             ssDiv.on('click', '#Undo', ssObj.undo);
 
             ssDiv.on('click', '#Menu', ssObj.menu);
+            
+            ssDiv.on('click', '#Just', ssObj.compact);
+
+            ssDiv.on('click', '#Hide', ssObj.hide);
 
             //if they want to use ctrl-z to undo
-            $('*').keypress(ssObj.keyPress);
+            $(document).keyup(ssObj.keyPress);
 
             // if they resize the window (or rotate their device)
             $(window).resize( function (event) {
-                ssObj.maxHeight = (document.body.clientHeight - ssObj.tablePadding) > ssObj.minHeight ? (document.body.clientHeight - ssObj.tablePadding) : ssObj.minHeight;
+                //ssObj.maxHeight = ($('.ssParent')[0].clientHeight - ssObj.tablePadding) > ssObj.minHeight ? ($('.ssParent')[0].clientHeight - ssObj.tablePadding) : ssObj.minHeight;
                 ssObj.respaceCards();
             });
 
@@ -283,7 +286,7 @@ jQuery(function($) {
 
                 $('#Undo').prop('disabled', eval(ssObj.moves.length > 0));
 
-                ssObj.playing = true;
+                ssObj.playing = (ssObj.piles[0].length != 13); // may have loaded a completed game
 
             } else {
                 // make sure we clear any previous game
@@ -375,7 +378,7 @@ jQuery(function($) {
                 for (var count = 0; count < 10; count++) {
                     var card = ssObj.piles[stack].pop();
                     card.facingUp = true;
-                    $('#' + card.id).css('background-image', 'url(images/card_' + card.suit + card.value + '.gif)');
+                    $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
                     ssObj.piles[8 + count].push(card);
                     $('#base_' + count).append($('#' + card.id));
                 }
@@ -413,7 +416,7 @@ jQuery(function($) {
                     !ssObj.piles[sourcePile.result][ssObj.piles[sourcePile.result].length - 1].facingUp) {
                     ssObj.piles[sourcePile.result][ssObj.piles[sourcePile.result].length - 1].facingUp = true;
                     var card = ssObj.piles[sourcePile.result][ssObj.piles[sourcePile.result].length - 1];
-                    $('#' + card.id).css('background-image', 'url(images/card_' + card.suit + card.value + '.gif)');
+                    $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
                     resultedInTurn = true;
                 }
                 ssObj.recordMove(onthemove.id, sourcePile.result, targetPile.result, resultedInTurn);
@@ -499,8 +502,10 @@ jQuery(function($) {
         this.keyPress = function (ev) {
             try {
                 // chrome returns 26 for z, FireFox returns 122 or 90 if caps-lock on
-                if (ev.ctrlKey && (ev.charCode == 26 || ev.charCode == 122 || ev.charCode == 90) && ssObj.moves.length > 0) {
+                if (ev.ctrlKey && ((ev.key == 'z') ||(ev.keyCode == 90)) && ssObj.moves.length > 0) {
                     ssObj.undo();
+                } else if (ev.key == 'Escape' || ev.keyCode == 27) {
+                    ssObj.hide();
                 }
             } catch (ex) {}
             ev.preventDefault();
@@ -513,6 +518,36 @@ jQuery(function($) {
             //@@todo change this in to a form also showing high scores etc
             ssObj.alert(ssObj.getTemplate('menu'));
         };
+
+
+        // hide everything except the game
+        this.compact = function () {
+            if (ssObj.compacted == true) {
+                $(document.body).removeClass('sscompact');
+                ssObj.compacted = false;
+            } else {
+                $(document.body).addClass('sscompact');
+                $('#spidersolitaire *, #spidersolitaire').addClass('ssexceptme');
+                var e = $('#spidersolitaire').parent();
+                while (e[0].nodeName != 'BODY') {
+                    e.addClass('ssexceptme');
+                    e = e.parent();
+                }
+                ssObj.compacted = true;
+            }
+        };
+
+
+        // hide everything except the game
+        this.hide = function () {
+            if (ssObj.hidden == true) {
+                $('.spidersolitaire').removeClass('sshide');
+                ssObj.hidden = false;
+            } else {
+                $('.spidersolitaire').addClass('sshide');
+                ssObj.hidden = true;
+            }
+        }
 
 
         //
@@ -569,7 +604,7 @@ jQuery(function($) {
                         if (ssObj.piles[stack].length > 0 && !ssObj.piles[stack][ssObj.piles[stack].length - 1].facingUp) {
                             ssObj.piles[stack][ssObj.piles[stack].length - 1].facingUp = true;
                             var tmpCard = ssObj.piles[stack][ssObj.piles[stack].length - 1];
-                            $('#' + tmpCard.id).css('background-image', 'url(images/card_' + tmpCard.suit + tmpCard.value + '.gif)');
+                            $('#' + tmpCard.id).css('background-image', 'url(ssimages/card_' + tmpCard.suit + tmpCard.value + '.gif)');
                             turned = true;
                         }
                         ssObj.recordMove(-2, stack, spareHome, turned);
@@ -670,14 +705,15 @@ jQuery(function($) {
         // recalculate the card spacing for the piles based on visible area
         this.respaceCards = function () {
             //  calculate margin-top of every card (except first) in base as "height of base - (count * height of card)"
-            var baseStyling = '\n';
+            var baseStyling = '\nbody.sscompact *:not(.ssexceptme) {display:none;}\n';
+            var tableSize = $('#table')[0].clientHeight;
             for (var stack = 0; stack < 10; stack++) {
-                var calcMargin = ssObj.minCardSpacing - ssObj.cardHeight;
+                var calcMargin = ssObj.maxCardSpacing - ssObj.cardHeight;
                 if (ssObj.piles[stack + 8].length > 1) {
-                    calcMargin = ((ssObj.maxHeight - ssObj.cardHeight) / (ssObj.piles[stack + 8].length - 1)) - ssObj.cardHeight;
-                    calcMargin = calcMargin > (ssObj.minCardSpacing - ssObj.cardHeight) ? (ssObj.minCardSpacing - ssObj.cardHeight) : calcMargin;
+                    var calcSpacing = (tableSize - ssObj.cardHeight - 80) / (ssObj.piles[stack + 8].length - 1);
+                    calcMargin = calcSpacing > ssObj.maxCardSpacing ? (ssObj.maxCardSpacing - ssObj.cardHeight) : (calcSpacing - ssObj.cardHeight);
                 }
-                baseStyling += '#base_' + stack + ' .card {margin-top:' + calcMargin + 'px;}\n';
+                baseStyling += '.spidersolitaire #base_' + stack + ' .card {margin-top:' + calcMargin + 'px;}\n';
             }
             $('#customStyle').html(baseStyling);
         };
@@ -739,7 +775,7 @@ jQuery(function($) {
                 $('#workspace').append('<div id="imageLoader" style="display:none;"/>');
             }
             var tmpCard = ssObj.deck[ssObj.initCard];
-            $('#imageLoader').css('background-image', 'url(images/card_' + tmpCard.suit + tmpCard.value + '.gif)');
+            $('#imageLoader').css('background-image', 'url(ssimages/card_' + tmpCard.suit + tmpCard.value + '.gif)');
             ssObj.initCard++;
             if (ssObj.initCard < ssObj.deck.length) {
                 setTimeout(ssObj.loadImages, 30);
@@ -771,12 +807,14 @@ jQuery(function($) {
                             '<input type="button" id="Deal" value="Deal" >' +
                             '<input type="button" id="Menu" value="Menu" >' +
                             '<input type="button" id="New" value="New" >' +
+                            '<input type="button" id="Just" value="Just" >' +
+                            '<input type="button" id="Hide" value="Hide" >' +
                         '</form>' +
                     '</div>' +
                     '<div id="table">' +
                     '</div>',
                 'card-face':
-                    '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;background-image:url(images/card_%face%.gif);" ondragover="event.preventDefault();" />',
+                    '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;background-image:url(ssimages/card_%face%.gif);" ondragover="event.preventDefault();" />',
                 'card-back':
                     '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;" ondragover="%dropFunction%"/>',
                 'stack-base':

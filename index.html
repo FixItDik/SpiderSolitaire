@@ -1,23 +1,81 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!doctype html>
 <html>
-<head>
-	<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
-	<title>Spider Solitaire</title>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>SpiderSolitaire in JavaScript by FixItDik</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    
 	<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
     <script type="text/javascript" src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js" integrity="sha256-eGE6blurk5sHj+rmkfsGYeKyZx3M4bG+ZlFyA7Kns7E=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
-	<script type="text/javascript" src="js/spider-solitaire.js"></script>
-	<link rel="stylesheet" href="css/spider-solitaire.css" type="text/css">
-</head>
-<body>
+    
+	<script type="text/javascript" src="ssjs/spider-solitaire.js"></script>
+	<link rel="stylesheet" href="sscss/spider-solitaire.css" type="text/css">
+	
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">SpiderSolitaire in JavaScript</h1>
+        <p class="header">A close approximation to the pre-Windows 8 version written in JavaScript, HTML5 and CSS</p>
 
-<div id="spidersolitaire"></div>
-<script type="text/javascript">
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/FixItDik/SpiderSolitaire/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/FixItDik/SpiderSolitaire/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/FixItDik/SpiderSolitaire">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/FixItDik">FixItDik</a></p>
+
+
+      </header>
+      <section>
+        <h1>Demo</h1>
+            <div id="spidersolitaire"></div>
+            <script type="text/javascript">
+                jQuery(function ($) {
+                    (new SpiderSolitaire()).init();
+                });
+            </script>
+      </section>
+      <section>
+        <h1>Further info</h1>
+        <h2>To include in your own web page</h2>
+        <p>To include in a page of your own you need to download the files from GitHub and then copy the folders "sscss", "ssjs" and 
+        "ssimages" to the same directory where your HTML page is.  Once this is done just make the following changes to your HTML:</p>
+        <h3>To the &lt;head&gt; add</h3>
+        <pre><code>
+&lt;!-- you can use any version of jQuery you want but remember to include the ui and ui-css --&gt;
+&lt;script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.min.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css"&gt;
+
+&lt;script type="text/javascript" src="ssjs/spider-solitaire.js"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="sscss/spider-solitaire.css" type="text/css"&gt;
+        </code></pre>
+        <h3>Then in your &lt;body&gt; add</h3>
+        <pre><code>
+&lt;div id="spidersolitaire"&gt;&lt;/div&gt;
+&lt;script type="text/javascript"&gt;
     jQuery(function ($) {
         (new SpiderSolitaire()).init();
     });
-    
-
-</script>
-</body>
+&lt;/script&gt;
+        </code></pre>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
 </html>
