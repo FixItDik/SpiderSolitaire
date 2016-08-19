@@ -26,5 +26,7 @@
 .spidersolitaire.sshide #table, .spidersolitaire.sshide .card, .spidersolitaire.sshide .base {visibility:hidden;}
 .spidersolitaire.sshide #workspace {background-color:inherit;}
 
-.ssscores th {font-family:Verdana,sans-serif;font-size:inherit;}
 .ssscores th, .ssscores td {padding:2px;text-align:center;}
+.ssscores th {font-family:Verdana,sans-serif;font-size:inherit;color:white;background-color:black;}
+.ssscores td {background-color:#c0c0c0;}
+.ssscores tr.highlight {color:red;}

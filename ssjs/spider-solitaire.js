@@ -37,10 +37,6 @@ jQuery(function($) {
         ssObj.piles = [];
         ssObj.deck = [];
         
-        for (var stack = 0; stack < 18; stack++) {
-            ssObj.piles[stack] = [];
-        }
-        
         ssObj.playerName = '';
         ssObj.highScores = [];
         ssObj.scoresToKeep = 10;
@@ -89,7 +85,7 @@ jQuery(function($) {
 
             ssDiv.on('click', '#Undo', ssObj.undo);
 
-            ssDiv.on('click', '#Menu', ssObj.menu);
+            ssDiv.on('click', '#Menu', ssObj.showMenu);
             
             ssDiv.on('click', '#Just', ssObj.compact);
 
@@ -177,11 +173,10 @@ jQuery(function($) {
 
         // Do double check if they are in middle of a game
         this.checkForNewGame = function () {
-            //@@todo: change confirm to dialog
-            if (!ssObj.playing || confirm('You are in the middle of a game, are you sure?')) {
-                // forget the old game
-                ssObj.forgetGame();
+            if (!ssObj.playing) {
                 ssObj.newGame();
+            } else {
+                ssObj.confirm(ssObj.getTemplate('confirmNew'), ssObj.newGame);
             }
         };
 
@@ -189,15 +184,13 @@ jQuery(function($) {
         // start a new game
         this.newGame = function () {
             // re-initialise the basic parts of a game
+            ssObj.forgetGame();
             ssObj.moves = [];
             ssObj.piles = [];
             ssObj.deck = [];
             ssObj.score = 500;
             ssObj.playing = false;
             ssObj.cardSelected = -1;
-            for (var stack = 0; stack < 18; stack++) {
-                ssObj.piles[stack] = [];
-            }
 
             // draw the buttons and pile locations
             ssDiv.html('').append(ssObj.getTemplate('tableaux'));
@@ -277,7 +270,7 @@ jQuery(function($) {
             var suits = ['c', 'd', 'h', 's'];
             var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
             var pile = [];
-
+            
             if (ssObj.readGame()) {
                 // there's an ongoing game so load it
 
@@ -297,7 +290,15 @@ jQuery(function($) {
             } else {
                 // make sure we clear any previous game
                 ssObj.forgetGame();
+                
+                ssObj.score = 500;
 
+                if (ssObj.piles.length == 0) {
+                    for (var stack = 0; stack < 18; stack++) {
+                        ssObj.piles[stack] = [];
+                    }
+                }
+    
                 // create cards
                 var card = 0;
                 for (var pack = 0; pack < 2; pack++) {
@@ -517,17 +518,56 @@ jQuery(function($) {
 
 
         // display the Menu (placeholder at moment)
-        this.menu = function () {
-            //@@todo change this in to a form also showing high scores etc
-            var message = ssObj.getTemplate('menu');
+        this.showMenu = function (theirScore) {
             var scores = ssObj.getTemplate('score');
             var tmp = '';
+            var congrats = '';
+            if (!isNaN(theirScore)) {
+                congrats = ssObj.getTemplate('congrats').replace('%score%', theirScore);
+            } else {
+                theirScore = 0;
+            }
             for (var index=0; index < ssObj.highScores.length; index++) {
+                var highlight = '';
+                if ((ssObj.highScores[index].score == theirScore) && (('' + ssObj.highScores[index].date).substr(0,10) == JSON.parse(JSON.stringify(new Date())).substr(0,10))) {
+                    highlight = 'highlight';
+                }
                 tmp += scores.replace('%score%', ssObj.highScores[index].score)
                             .replace('%date%', ('' + ssObj.highScores[index].date).substr(0,10))
-                            .replace('%name%', ssObj.highScores[index].player);
+                            .replace('%name%', ssObj.highScores[index].player)
+                            .replace('%highlight%', highlight);
             }
-            ssObj.alert(message.replace('%scores%', tmp));     
+            $('<div>' + ssObj.getTemplate('menu').replace('%player%', ssObj.playerName).replace('%scores%', tmp).replace('%congratulate%', congrats) +'</div>').dialog(
+                {
+                    modal : true, 
+                    title :  "Spider Solitaire",
+                    buttons: [
+                        {
+                            text : 'save name & reset scores',
+                            click : function () {
+                                ssObj.playerName = $('#ssplayer').val();
+                                ssObj.highScores = [];
+                                try {
+                                    localStorage.removeItem('spidersolitaireHighScores');
+                                } catch (ex) {}
+                                ssObj.saveGame();
+                                $(this).dialog('destroy');
+                            }
+                        },
+                        {
+                            text : 'close', 
+                            click : function () {
+                                $(this).dialog('destroy');
+                            },
+                            class : 'default-button'
+                        }
+                    ],
+                    close : function () {
+                        $(this).dialog('destroy');
+                    }
+                });
+            $('.ui-dialog, .ui-dialog *, .ui-widget-overlay').addClass('ssexceptme');
+            $('.default-button').focus();
         };
 
 
@@ -640,35 +680,35 @@ jQuery(function($) {
                 ssObj.highScoreCheck();
                 ssObj.saveGame();
                 //@@todo ask them if they want to start a new game
-                ssObj.alert('Congratulations, you have finished, with a score of ' + ssObj.score);
-                //@@todo record the high scores
+                ssObj.showMenu(ssObj.score);
             }
         };
 
 
         // check if current score is a high score and if so add it to the top 10
         this.highScoreCheck = function () {
-            if (ssObj.highScores.length == 0) {
+            var index;
+            for (index = 0; index < ssObj.highScores.length; index++) {
+                var highScore = ssObj.highScores[index];
+                if (highScore.score < ssObj.score) {
+                    ssObj.highScores.splice(index, 0, { score: ssObj.score,
+                                    date: new Date(),
+                                    player: ssObj.playerName
+                                    });
+                    if (ssObj.highScores.length > ssObj.scoresToKeep) {
+                        ssObj.highScores.pop(); // remove last one
+                    }
+                    break;
+                }
+            }
+            
+            if (index == ssObj.highScores.length && ssObj.highScores.length < ssObj.scoresToKeep) {
                 ssObj.highScores.push({ score: ssObj.score,
                                         date: new Date(),
                                         player: ssObj.playerName
                                         });
-            } else {
-                for (var index=0; index<ssObj.highScores.length; index++) {
-                    var highScore = ssObj.highScores[index];
-                    if (highScore.score < ssObj.score) {
-                        ssObj.highScores.splice(index, 0, { score: ssObj.score,
-                                        date: new Date(),
-                                        player: ssObj.playerName
-                                        });
-                        if (ssObj.highScores.length > ssObj.scoresToKeep) {
-                            ssObj.pop(); // remove last one
-                        }
-                        break;
-                    }
-                }
-                ssObj.highScores = JSON.parse(JSON.stringify(ssObj.highScores)); // ensures dates are in UTC format for displaying
             }
+            ssObj.highScores = JSON.parse(JSON.stringify(ssObj.highScores)); // ensures dates are in UTC format for displaying
         };
 
 
@@ -788,6 +828,7 @@ jQuery(function($) {
                     localStorage.setItem('spidersolitaireDeck', JSON.stringify(ssObj.deck));
                     localStorage.setItem('spidersolitaireScore', JSON.stringify(ssObj.score));
                     localStorage.setItem('spidersolitaireHighScores', JSON.stringify(ssObj.highScores));
+                    localStorage.setItem('spidersolitairePlayerName', JSON.stringify(ssObj.playerName));
                 } catch (ex) {
                     // just catch
                 }
@@ -800,22 +841,35 @@ jQuery(function($) {
         this.readGame = function () {
             if (typeof(Storage) !== "undefined" && localStorage !== undefined) {
                 ssObj.usingstorage = true;
-                try {
-                    ssObj.deck = JSON.parse(localStorage.spidersolitaireDeck);
-                    ssObj.piles = JSON.parse(localStorage.spidersolitairePiles);
-                    ssObj.moves = JSON.parse(localStorage.spidersolitaireMoves);
-                    ssObj.score = JSON.parse(localStorage.spidersolitaireScore);
-                    ssObj.highScores = JSON.parse(localStorage.spidersolitaireHighScores);
-                    return (localStorage.spidersolitaireMoves && localStorage.spidersolitairePiles && localStorage.spidersolitaireDeck);
-                } catch (ex) {
-                    return false;
-                }
+                ssObj.deck = ssObj.readStorage(localStorage.spidersolitaireDeck, 'array');
+                ssObj.piles = ssObj.readStorage(localStorage.spidersolitairePiles, 'array');
+                ssObj.moves = ssObj.readStorage(localStorage.spidersolitaireMoves, 'array');
+                ssObj.score = ssObj.readStorage(localStorage.spidersolitaireScore, 'number');
+                ssObj.playerName = ssObj.readStorage(localStorage.spidersolitairePlayerName, 'string');
+                ssObj.highScores = ssObj.readStorage(localStorage.spidersolitaireHighScores, 'array');
+                return (ssObj.piles.length > 0);
             } else if (!(document.cookie.indexOf('nostorage') > -1)) {
                 document.cookie = 'nostorage=true';
                 ssObj.alert('Your browser does not support "localStorage" so there is no way to remember games, sorry');
             }
             ssObj.usingstorage = false;
             return false;
+        };
+
+
+        // parse localStorage item without error
+        this.readStorage = function (item, type) {
+            try {
+                return JSON.parse(item);
+            } catch (ex) {
+                if (type == 'array') {
+                    return [];
+                } else if (type == 'number') {
+                    return 0;
+                } else {
+                    return '';
+                }
+            }
         };
 
 
@@ -835,7 +889,7 @@ jQuery(function($) {
 
 
         // reset the remembered high scores
-        this.resetHighScores = function () {
+        this.resetHighScores = function (newName) {
             ssObj.highScores = [];
             try {
                 localStorage.removeItem('spidersolitaireHighScores');
@@ -860,9 +914,37 @@ jQuery(function($) {
 
         //replace window alert with jQuery dialog
         this.alert = function (someHTML) {
-            $('<div>' + someHTML +'</div>').dialog({modal: true, title: "Spider Solitaire"});
+            $('<div>' + someHTML +'</div>').dialog({
+                modal : true, 
+                title : "Spider Solitaire", 
+                close : function () {
+                    $(this).dialog('destroy');
+                }
+            });
             $('.ui-dialog, .ui-dialog *').addClass('ssexceptme');
         };
+
+
+        // replace window confirm with jQuery dialog
+        this.confirm = function (question, confirmFunction) {
+            $('<div>' + question + '</div>').dialog({
+                title : 'Are you sure?',
+                close : function () {
+                    $(this).dialog('destroy');
+                },
+                buttons : {
+                    "Confirm" : function () {
+                        $(this).dialog('destroy');
+                        confirmFunction();
+                    },
+                    "Cancel" : function () {
+                        $(this).dialog('destroy');
+                    }
+                }
+            });
+            $('.ui-dialog, .ui-dialog *, .ui-widget-overlay').addClass('ssexceptme');
+        };
+
 
 
         // custom exception to give notice to user
@@ -870,13 +952,13 @@ jQuery(function($) {
             ssObj.alert(message);
             this.message = message;
             this.name = "Fatal SpiderSolitaire error";
-        }
+        };
 
 
         // return appropriate HTML template for elements of game
         this.getTemplate = function (templateName) {
             var templates = {
-                'tableaux':
+                'tableaux' :
                     '<div id="workspace">' +
                         '<form name="ButtonsForm">' +
                             '<input type="button" id="Undo" value="Undo" disabled="true">' +
@@ -890,18 +972,24 @@ jQuery(function($) {
                     '</div>' +
                     '<div id="table">' +
                     '</div>',
-                'card-face':
+                'card-face' :
                     '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;background-image:url(ssimages/card_%face%.gif);" ondragover="event.preventDefault();" />',
-                'card-back':
+                'card-back' :
                     '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;" ondragover="%dropFunction%"/>',
-                'stack-base':
+                'stack-base' :
                     '<div id="base_%id%" class="base canDrop" style="z-index:%zindex%;" ondragover="event.preventDefault();"/>',
-                'home-base':
+                'home-base' :
                     '<div id="home_%id%" class="base home" style="z-index:%zindex%;"/>',
-                'score':
-                    '<tr><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
+                'score' :
+                    '<tr class="%highlight%"><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
                 'menu' :
-                    '<div class="menu">Still working on this but here are the high scores:<br><table class="ssscores"><tr><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>'
+                    '<div class="menu">%congratulate%The top 10 high scores are:<br>' +
+                    '<table class="ssscores"><tr><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>' +
+                    '<label for="ssplayer">Your name:&nbsp;</label><input type="text" id="ssplayer" value="%player%">',
+                'congrats' :
+                    'Congratulations, you have finished and your score is %score%<br>',
+                'confirmNew' :
+                    'You are in the middle of a game, are you sure?'
             };
             return templates[templateName];
         };
