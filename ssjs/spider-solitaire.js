@@ -474,6 +474,7 @@ jQuery(function($) {
                         $(t).append($('#' + card.id));
                     });
                     ssObj.piles[thisMove.sourcePile] = ssObj.piles[thisMove.sourcePile].concat(hand);
+                    ssObj.score -= 99;
                     ssObj.undo(); //because this is automatic we need to undo the move that caused it as well
 
                 } else {
@@ -540,7 +541,8 @@ jQuery(function($) {
             $('<div>' + ssObj.getTemplate('menu').replace('%player%', ssObj.playerName).replace('%scores%', tmp).replace('%congratulate%', congrats) +'</div>').dialog(
                 {
                     modal : true, 
-                    title :  "Spider Solitaire",
+                    title :  'Spider Solitaire',
+                    dialogClass : 'ssmenu',
                     buttons: [
                         {
                             text : 'save name & reset scores',
@@ -552,12 +554,18 @@ jQuery(function($) {
                                 } catch (ex) {}
                                 ssObj.saveGame();
                                 $(this).dialog('destroy');
+                                if (theirScore > 0) {
+                                    ssObj.newGame();
+                                }
                             }
                         },
                         {
                             text : 'close', 
                             click : function () {
                                 $(this).dialog('destroy');
+                                if (theirScore > 0) {
+                                    ssObj.newGame();
+                                }
                             },
                             class : 'default-button'
                         }
@@ -679,7 +687,6 @@ jQuery(function($) {
                 ssObj.moves = [];
                 ssObj.highScoreCheck();
                 ssObj.saveGame();
-                //@@todo ask them if they want to start a new game
                 ssObj.showMenu(ssObj.score);
             }
         };
