@@ -48,7 +48,7 @@ jQuery(function($) {
         ssObj.cardHeight = 96;
         ssObj.cardWidth = 71;
         ssObj.cardPadding = 6;
-        ssObj.minHeight = 535;
+        ssObj.minHeight = 350;
         ssObj.tablePadding = 40;
 
         ssObj.maxCardSpacing = ssObj.cardHeight / 4;
@@ -195,11 +195,18 @@ jQuery(function($) {
             // draw the buttons and pile locations
             ssDiv.html('').append(ssObj.getTemplate('tableaux'));
             var target = $('#workspace');
-            var base = ssObj.getTemplate('home-base');
-            for (var home = 0; home < 8; home++) {
+            var base = ssObj.getTemplate('deal-base');
+            for (var home = 0; home < 5; home++) {
                 target.append(base
                     .replace('%id%', home)
                     .replace('%zindex%', 0)
+                    );
+            }
+            var base = ssObj.getTemplate('home-base');
+            for (var home = 5; home < 13; home++) {
+                target.append(base
+                    .replace('%id%', home)
+                    .replace('%zindex%', home)
                     );
             }
             target = $('#table');
@@ -225,7 +232,7 @@ jQuery(function($) {
             var cardBackCode = ssObj.getTemplate('card-back');
             var id = 0;
 
-            for (var stack = 0; stack < 8; stack++) {
+            for (var stack = 0; stack < 13; stack++) {
                 target = $('#home_' + stack);
                 for (var card = 0; card < ssObj.piles[stack].length; card++) {
                     var thisCard = ssObj.piles[stack][card];
@@ -241,8 +248,8 @@ jQuery(function($) {
                 }
             }
 
-            for (var stack = 8; stack < 18; stack++) {
-                target = $('#base_' + (stack-8));
+            for (var stack = 13; stack < 23; stack++) {
+                target = $('#base_' + (stack - 13));
                 for (var card = 0; card < ssObj.piles[stack].length; card++) {
                     var thisCard = ssObj.piles[stack][card];
                     var cardCode = thisCard.facingUp ? cardFaceCode : cardBackCode;
@@ -294,7 +301,7 @@ jQuery(function($) {
                 ssObj.score = 500;
 
                 if (ssObj.piles.length == 0) {
-                    for (var stack = 0; stack < 18; stack++) {
+                    for (var stack = 0; stack < 23; stack++) {
                         ssObj.piles[stack] = [];
                     }
                 }
@@ -340,7 +347,7 @@ jQuery(function($) {
                 // create playing stacks (deal one card on each stack until all gone)
                 card = 50;
                 do {
-                    for (stack = 8; stack < 18; stack++) {
+                    for (stack = 13; stack < 23; stack++) {
                         if (card >= 94) {
                             pile[card].facingUp = true;
                         };
@@ -362,7 +369,7 @@ jQuery(function($) {
             var stack;
             // first check there are no empty spaces
             for (stack = 0; stack < 10; stack++) {
-                if (ssObj.piles[8 + stack].length == 0) {
+                if (ssObj.piles[13 + stack].length == 0) {
                     break;
                 }
             }
@@ -386,7 +393,7 @@ jQuery(function($) {
                     var card = ssObj.piles[stack].pop();
                     card.facingUp = true;
                     $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
-                    ssObj.piles[8 + count].push(card);
+                    ssObj.piles[13 + count].push(card);
                     $('#base_' + count).append($('#' + card.id));
                 }
 
@@ -414,7 +421,7 @@ jQuery(function($) {
                 var sourcePile = ssObj.getPileContainingCard(onthemove.id);
                 var hand = ssObj.piles[sourcePile.result].splice(sourcePile.pos, ssObj.piles[sourcePile.result].length - sourcePile.pos);
                 hand.forEach( function (card, cardIndex) {
-                    t = targetPile.result < 8 ? $('#home_' + targetPile.result) : $('#base_' + (targetPile.result - 8));
+                    t = targetPile.result < 13 ? $('#home_' + targetPile.result) : $('#base_' + (targetPile.result - 13));
                     $(t).append($('#' + card.id));
                 });
                 ssObj.piles[targetPile.result] = ssObj.piles[targetPile.result].concat(hand);
@@ -453,7 +460,7 @@ jQuery(function($) {
                     } else {
                         //deal here
                         for (var count = 9; count >= 0; count--) {
-                            var card = ssObj.piles[8 + count].pop();
+                            var card = ssObj.piles[13 + count].pop();
                             card.facingUp = false;
                             $('#' + card.id).css('background-image', '');
                             ssObj.piles[stack].push(card);
@@ -470,7 +477,7 @@ jQuery(function($) {
                     }
                     var hand = ssObj.piles[thisMove.targetPile].splice(ssObj.piles[thisMove.targetPile].length - 13, 13);
                     hand.forEach(function (card, cardIndex) {
-                        var t = thisMove.sourcePile < 8 ? $('#home_' + thisMove.sourcePile) : $('#base_' + (thisMove.sourcePile - 8));
+                        var t = thisMove.sourcePile < 13 ? $('#home_' + thisMove.sourcePile) : $('#base_' + (thisMove.sourcePile - 13));
                         $(t).append($('#' + card.id));
                     });
                     ssObj.piles[thisMove.sourcePile] = ssObj.piles[thisMove.sourcePile].concat(hand);
@@ -488,7 +495,7 @@ jQuery(function($) {
                     var tmp = ssObj.getPileContainingCard(thisMove.cardId);
                     var hand = ssObj.piles[thisMove.targetPile].splice(tmp.pos, ssObj.piles[thisMove.targetPile].length - tmp.pos);
                     hand.forEach(function (card, cardIndex) {
-                        var t = thisMove.sourcePile < 8 ? $('#home_' + thisMove.sourcePile) : $('#base_' + (thisMove.sourcePile - 8));
+                        var t = thisMove.sourcePile < 13 ? $('#home_' + thisMove.sourcePile) : $('#base_' + (thisMove.sourcePile - 13));
                         $(t).append($('#' + card.id));
                     });
                     ssObj.piles[thisMove.sourcePile] = ssObj.piles[thisMove.sourcePile].concat(hand);
@@ -636,7 +643,7 @@ jQuery(function($) {
             var spareHome = -2;
 
             // work out where we would put it if we find one
-            for (stack = 7; stack >= 0; stack--) {
+            for (stack = 5; stack < 13; stack++) {
                 if (ssObj.piles[stack].length == 0) {
                     spareHome = stack;
                     break;
@@ -644,7 +651,7 @@ jQuery(function($) {
             }
 
             // now look to see if one exists
-            for (stack = 8; stack < 18; stack++) {
+            for (stack = 13; stack < 23; stack++) {
                 var topCard = ssObj.piles[stack][ssObj.piles[stack].length - 1];
                 var cardAbove = topCard
                 if (ssObj.piles[stack].length >= 13
@@ -676,12 +683,12 @@ jQuery(function($) {
                             turned = true;
                         }
                         ssObj.recordMove(-2, stack, spareHome, turned);
-                        spareHome--;
+                        spareHome++;
                     }
                 }
             }
 
-            if (spareHome == -1) {
+            if (spareHome == 13) {
                 ssObj.displayScore();
                 ssObj.playing = false;
                 ssObj.moves = [];
@@ -723,7 +730,7 @@ jQuery(function($) {
         this.getPileDroppedOn = function (target) {
             var id = '' + target.id;
             if (id.indexOf("base_") == 0) {
-                return {result: 8 + eval(id.substr(5)), cardOnTop:undefined};
+                return {result: 13 + eval(id.substr(5)), cardOnTop:undefined};
             } else {
                 return ssObj.getPileContainingCard(id);
             }
@@ -777,8 +784,8 @@ jQuery(function($) {
             var tableSize = $('#table')[0].clientHeight;
             for (var stack = 0; stack < 10; stack++) {
                 var calcMargin = ssObj.maxCardSpacing - ssObj.cardHeight;
-                if (ssObj.piles[stack + 8].length > 1) {
-                    var calcSpacing = (tableSize - ssObj.cardHeight - 80) / (ssObj.piles[stack + 8].length - 1);
+                if (ssObj.piles[stack + 13].length > 1) {
+                    var calcSpacing = (tableSize - ssObj.cardHeight - 80) / (ssObj.piles[stack + 13].length - 1);
                     calcMargin = calcSpacing > ssObj.maxCardSpacing ? (ssObj.maxCardSpacing - ssObj.cardHeight) : (calcSpacing - ssObj.cardHeight);
                 }
                 baseStyling += '.spidersolitaire #base_' + stack + ' .card {margin-top:' + calcMargin + 'px;}\n';
@@ -800,7 +807,7 @@ jQuery(function($) {
 
             // now go determine which cards can be dragged and set them up accordingly
             ssObj.piles.forEach ( function (pile, pileIndex) {
-                if (pileIndex >= 8) {
+                if (pileIndex >= 13) {
                     if (pile.length) {
                         pile[pile.length - 1].canDrag = true;
                         $('#' + pile[pile.length - 1].id).addClass('canDrag');
@@ -848,13 +855,13 @@ jQuery(function($) {
         this.readGame = function () {
             if (typeof(Storage) !== "undefined" && localStorage !== undefined) {
                 ssObj.usingstorage = true;
+                ssObj.playerName = ssObj.readStorage(localStorage.spidersolitairePlayerName, 'string');
+                ssObj.highScores = ssObj.readStorage(localStorage.spidersolitaireHighScores, 'array');
                 ssObj.deck = ssObj.readStorage(localStorage.spidersolitaireDeck, 'array');
                 ssObj.piles = ssObj.readStorage(localStorage.spidersolitairePiles, 'array');
                 ssObj.moves = ssObj.readStorage(localStorage.spidersolitaireMoves, 'array');
                 ssObj.score = ssObj.readStorage(localStorage.spidersolitaireScore, 'number');
-                ssObj.playerName = ssObj.readStorage(localStorage.spidersolitairePlayerName, 'string');
-                ssObj.highScores = ssObj.readStorage(localStorage.spidersolitaireHighScores, 'array');
-                return (ssObj.piles.length > 0);
+                return ((ssObj.piles.length == 23));
             } else if (!(document.cookie.indexOf('nostorage') > -1)) {
                 document.cookie = 'nostorage=true';
                 ssObj.alert('Your browser does not support "localStorage" so there is no way to remember games, sorry');
@@ -914,7 +921,7 @@ jQuery(function($) {
             $('#imageLoader').css('background-image', 'url(ssimages/card_' + tmpCard.suit + tmpCard.value + '.gif)');
             ssObj.initCard++;
             if (ssObj.initCard < ssObj.deck.length) {
-                setTimeout(ssObj.loadImages, 30);
+                setTimeout(ssObj.loadImages, 100);
             }
             // else could remove the div here
         };
@@ -985,6 +992,8 @@ jQuery(function($) {
                     '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;" ondragover="%dropFunction%"/>',
                 'stack-base' :
                     '<div id="base_%id%" class="base canDrop" style="z-index:%zindex%;" ondragover="event.preventDefault();"/>',
+                'deal-base' :
+                    '<div id="home_%id%" class="base deal" style="z-index:%zindex%;"/>',
                 'home-base' :
                     '<div id="home_%id%" class="base home" style="z-index:%zindex%;"/>',
                 'score' :
