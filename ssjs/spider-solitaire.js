@@ -165,6 +165,31 @@ jQuery(function($) {
                 event.preventDefault();
                 event.stopPropagation();
             });
+            
+            // detect right-click and show card face in full
+            ssDiv.on('mousedown', '.faceup.canDrop', function (event) {
+                if (event.button == 2) {
+                    this.style.zIndex = '999';
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            });
+            
+            // detect release of right-click and put card back
+            ssDiv.on('mouseup', '.faceup.canDrop', function (event) {
+                if (event.button == 2) {
+                    this.style.zIndex = '200';
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            });
+
+            // and prevent the default (context menu) action
+            ssDiv.on('contextmenu', '.faceup.canDrop', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            
         };
 
         ///
@@ -323,6 +348,7 @@ jQuery(function($) {
                 }
                 // shuffle them
                 //@@todo: seed the random numbers so games can be replayed
+                /*
                 for (var shuffle = 0; shuffle < 8000; shuffle++) {
                     card1 = Math.floor(Math.random() * 1000) % 104;
                     card2 = Math.floor(Math.random() * 1000) % 104;
@@ -330,7 +356,7 @@ jQuery(function($) {
                     pile[card1] = pile[card2];
                     pile[card2] = tempCard;
                 }
-
+*/
                 // assign card ids after shuffle
                 for (var id = 0; id < pile.length; id++) {
                     pile[id].id = id;
@@ -393,6 +419,7 @@ jQuery(function($) {
                     var card = ssObj.piles[stack].pop();
                     card.facingUp = true;
                     $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
+                    $('#' + card.id).addClass('faceup');
                     ssObj.piles[13 + count].push(card);
                     $('#base_' + count).append($('#' + card.id));
                 }
@@ -430,6 +457,7 @@ jQuery(function($) {
                     ssObj.piles[sourcePile.result][ssObj.piles[sourcePile.result].length - 1].facingUp = true;
                     var card = ssObj.piles[sourcePile.result][ssObj.piles[sourcePile.result].length - 1];
                     $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
+                    $('#' + card.id).addClass('faceup');
                     resultedInTurn = true;
                 }
                 ssObj.recordMove(onthemove.id, sourcePile.result, targetPile.result, resultedInTurn);
@@ -463,6 +491,7 @@ jQuery(function($) {
                             var card = ssObj.piles[13 + count].pop();
                             card.facingUp = false;
                             $('#' + card.id).css('background-image', '');
+                            $('#' + card.id).removeClass('faceup');
                             ssObj.piles[stack].push(card);
                             $('#home_' + stack).append($('#' + card.id));
                         }
@@ -474,6 +503,7 @@ jQuery(function($) {
                         ssObj.piles[thisMove.sourcePile][ssObj.piles[thisMove.sourcePile].length - 1].facingUp = false;
                         var card = ssObj.piles[thisMove.sourcePile][ssObj.piles[thisMove.sourcePile].length - 1];
                         $('#' + card.id).css('background-image', '');
+                        $('#' + card.id).removeClass('faceup');
                     }
                     var hand = ssObj.piles[thisMove.targetPile].splice(ssObj.piles[thisMove.targetPile].length - 13, 13);
                     hand.forEach(function (card, cardIndex) {
@@ -490,6 +520,7 @@ jQuery(function($) {
                         ssObj.piles[thisMove.sourcePile][ssObj.piles[thisMove.sourcePile].length - 1].facingUp = false;
                         var card = ssObj.piles[thisMove.sourcePile][ssObj.piles[thisMove.sourcePile].length - 1];
                         $('#' + card.id).css('background-image', '');
+                        $('#' + card.id).removeClass('faceup');
                     }
                     // need to find pos of card in pile, quickest is to do call to getcardinpile
                     var tmp = ssObj.getPileContainingCard(thisMove.cardId);
@@ -680,6 +711,7 @@ jQuery(function($) {
                             ssObj.piles[stack][ssObj.piles[stack].length - 1].facingUp = true;
                             var tmpCard = ssObj.piles[stack][ssObj.piles[stack].length - 1];
                             $('#' + tmpCard.id).css('background-image', 'url(ssimages/card_' + tmpCard.suit + tmpCard.value + '.gif)');
+                            $('#' + tmpCard.id).addClass('faceup');
                             turned = true;
                         }
                         ssObj.recordMove(-2, stack, spareHome, turned);
@@ -987,15 +1019,15 @@ jQuery(function($) {
                     '<div id="table">' +
                     '</div>',
                 'card-face' :
-                    '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;background-image:url(ssimages/card_%face%.gif);" ondragover="event.preventDefault();" />',
+                    '<div id="%id%" class="card faceup %dropClass%" style="z-index:200;background-image:url(ssimages/card_%face%.gif);" ondragover="event.preventDefault();" />',
                 'card-back' :
-                    '<div id="%id%" class="card %dropClass%" style="z-index:%zindex%;" ondragover="%dropFunction%"/>',
+                    '<div id="%id%" class="card %dropClass%" style="z-index:200;" ondragover="%dropFunction%"/>',
                 'stack-base' :
-                    '<div id="base_%id%" class="base canDrop" style="z-index:%zindex%;" ondragover="event.preventDefault();"/>',
+                    '<div id="base_%id%" class="base canDrop" style="z-index:0;" ondragover="event.preventDefault();"/>',
                 'deal-base' :
-                    '<div id="home_%id%" class="base deal" style="z-index:%zindex%;"/>',
+                    '<div id="home_%id%" class="base deal" style="z-index:0;"/>',
                 'home-base' :
-                    '<div id="home_%id%" class="base home" style="z-index:%zindex%;"/>',
+                    '<div id="home_%id%" class="base home" style="z-index:0;"/>',
                 'score' :
                     '<tr class="%highlight%"><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
                 'menu' :

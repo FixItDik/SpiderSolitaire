@@ -27,6 +27,7 @@
 .spidersolitaire .home .card {display:none;}
 .spidersolitaire .home .card:nth-child(13) {display:inline-block;}
 .spidersolitaire .card {height:96px;width:71px;background-image:url(../ssimages/card_back.gif);}
+.spidersolitaire .card.faceup {position:relative;}
 .spidersolitaire .card.clicked {border: 2px solid blue;border-radius: 6px;margin:-2px;}
 
 .spidersolitaire .card:first-child {margin-top:0 !important;}
