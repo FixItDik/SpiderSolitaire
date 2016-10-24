@@ -39,6 +39,8 @@ jQuery(function($) {
         
         ssObj.playerName = '';
         ssObj.highScores = [];
+        ssObj.statPlayed = 0;
+        ssObj.statWon = 0;
         ssObj.scoresToKeep = 10;
         ssObj.score = 500;
         ssObj.moveCount = 0;
@@ -69,7 +71,7 @@ jQuery(function($) {
             $(document).attr('draggable','false');
             ssDiv.attr('draggable','false');
             ssObj.initHandlers(ssDiv);
-            ssObj.newGame();
+            ssObj.newGame(false);
             ssObj.initCard = 0;
             setTimeout(ssObj.loadImages, 1);
         };
@@ -90,6 +92,9 @@ jQuery(function($) {
             ssDiv.on('click', '#Just', ssObj.compact);
 
             ssDiv.on('click', '#Hide', ssObj.hide);
+
+            // and if they click on an stack to deal it
+            ssDiv.on('click', '.deal', ssObj.deal);
 
             //if they want to use ctrl-z to undo
             $(document).keyup(ssObj.keyPress);
@@ -130,6 +135,7 @@ jQuery(function($) {
                 if (event.originalEvent.dataTransfer.getData("text")) {
                     ssObj.dragging = false;
                     ssObj.moveCard(event.originalEvent.dataTransfer.getData("text"), event.target);
+                    event.stopPropagation();
                 }
             });
 
@@ -201,15 +207,21 @@ jQuery(function($) {
             if (!ssObj.playing) {
                 ssObj.newGame();
             } else {
-                ssObj.confirm(ssObj.getTemplate('confirmNew'), ssObj.newGame);
+                ssObj.confirm(ssObj.getTemplate('confirmNew'), ssObj.abortGame);
             }
         };
 
+        // count abort as loss
+        this.abortGame = function () {
+            ssObj.statPlayed++;
+            ssObj.saveGame();
+            ssObj.newGame();
+        }
 
         // start a new game
-        this.newGame = function () {
+        this.newGame = function (forgetOld = true) {
             // re-initialise the basic parts of a game
-            ssObj.forgetGame();
+
             ssObj.moves = [];
             ssObj.piles = [];
             ssObj.deck = [];
@@ -247,7 +259,7 @@ jQuery(function($) {
             $('*').attr('draggable', false);
 
             // create the cards and shuffle them
-            ssObj.prepareCards();
+            ssObj.prepareCards(forgetOld);
 
             // display the cards
 
@@ -297,13 +309,13 @@ jQuery(function($) {
 
 
         // shuffle cards
-        this.prepareCards = function () {
+        this.prepareCards = function (forgetOld) {
             var pos = 0;
             var suits = ['c', 'd', 'h', 's'];
             var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
             var pile = [];
             
-            if (ssObj.readGame()) {
+            if (!forgetOld && ssObj.readGame()) {
                 // there's an ongoing game so load it
 
                 // disable buttons as necessary
@@ -348,7 +360,7 @@ jQuery(function($) {
                 }
                 // shuffle them
                 //@@todo: seed the random numbers so games can be replayed
-                /*
+
                 for (var shuffle = 0; shuffle < 8000; shuffle++) {
                     card1 = Math.floor(Math.random() * 1000) % 104;
                     card2 = Math.floor(Math.random() * 1000) % 104;
@@ -356,7 +368,7 @@ jQuery(function($) {
                     pile[card1] = pile[card2];
                     pile[card2] = tempCard;
                 }
-*/
+
                 // assign card ids after shuffle
                 for (var id = 0; id < pile.length; id++) {
                     pile[id].id = id;
@@ -425,7 +437,7 @@ jQuery(function($) {
                 }
 
                 ssObj.recordMove(-1, stack, -1, -1);
-                ssObj.checkAndDoRemove();
+                ssObj.checkAndDoRemove(); //impossible for this to end game so ignore returned flag
                 ssObj.refreshTable();
                 if (stack == 0) {
                     $('#Deal').prop('disabled', true);
@@ -461,8 +473,9 @@ jQuery(function($) {
                     resultedInTurn = true;
                 }
                 ssObj.recordMove(onthemove.id, sourcePile.result, targetPile.result, resultedInTurn);
-                ssObj.checkAndDoRemove();
-                ssObj.refreshTable();
+                if (ssObj.checkAndDoRemove()) {
+                    ssObj.refreshTable();
+                }
                 result = true;
             }
             return result;
@@ -556,19 +569,20 @@ jQuery(function($) {
         };
 
 
-        // display the Menu (placeholder at moment)
+        // display the Menu (theirScore is passed when displaying score at end of game)
         this.showMenu = function (theirScore) {
             var scores = ssObj.getTemplate('score');
+            var tmpPercent = 100 * (ssObj.statWon / ssObj.statPlayed);
+            tmpPercent = isNaN(tmpPercent) ? 0 : tmpPercent.toFixed(2);
             var tmp = '';
             var congrats = '';
             if (!isNaN(theirScore)) {
                 congrats = ssObj.getTemplate('congrats').replace('%score%', theirScore);
-            } else {
-                theirScore = 0;
+                ssObj.newGame();
             }
             for (var index=0; index < ssObj.highScores.length; index++) {
                 var highlight = '';
-                if ((ssObj.highScores[index].score == theirScore) && (('' + ssObj.highScores[index].date).substr(0,10) == JSON.parse(JSON.stringify(new Date())).substr(0,10))) {
+                if (!isNaN(theirScore) && (ssObj.highScores[index].score == theirScore) && (('' + ssObj.highScores[index].date).substr(0,10) == JSON.parse(JSON.stringify(new Date())).substr(0,10))) {
                     highlight = 'highlight';
                 }
                 tmp += scores.replace('%score%', ssObj.highScores[index].score)
@@ -576,34 +590,127 @@ jQuery(function($) {
                             .replace('%name%', ssObj.highScores[index].player)
                             .replace('%highlight%', highlight);
             }
-            $('<div>' + ssObj.getTemplate('menu').replace('%player%', ssObj.playerName).replace('%scores%', tmp).replace('%congratulate%', congrats) +'</div>').dialog(
+            $('<div>' + ssObj.getTemplate('menu')
+                .replace('%player%', ssObj.playerName)
+                .replace('%played%', ssObj.statPlayed)
+                .replace('%won%', ssObj.statWon)
+                .replace('%percent%', tmpPercent)
+                .replace('%scores%', tmp)
+                .replace('%congratulate%', congrats) + '</div>').dialog(
                 {
                     modal : true, 
                     title :  'Spider Solitaire',
                     dialogClass : 'ssmenu',
-                    buttons: [
+                    buttons : [
                         {
-                            text : 'save name & reset scores',
+                            text : 'save name',
+                            click : function () {
+                                ssObj.playerName = $('#ssplayer').val();
+                                for (var s = 0; s < ssObj.highScores.length; s++) {
+                                    if (ssObj.highScores[s].player == '') {
+                                        ssObj.highScores[s].player = ssObj.playerName;
+                                    }
+                                }
+                                ssObj.saveGame();
+                                $(this).dialog('destroy');
+                            }
+                        },
+                        {
+                            text : 'reset scores',
                             click : function () {
                                 ssObj.playerName = $('#ssplayer').val();
                                 ssObj.highScores = [];
+                                ssObj.statPlayed = 0;
+                                ssObj.statWon = 0;
                                 try {
                                     localStorage.removeItem('spidersolitaireHighScores');
                                 } catch (ex) {}
                                 ssObj.saveGame();
                                 $(this).dialog('destroy');
-                                if (theirScore > 0) {
-                                    ssObj.newGame();
-                                }
                             }
+                        },
+                        {
+                            text : 'save/restore', 
+                            click : function () {
+                                var tmpArray = ssObj.deck;
+                                var gameString = JSON.stringify(tmpArray).replace(/ /g,"@").replace(/\"/g, " ");
+                                $('<div>' + ssObj.getTemplate('saveRestore')
+                                    .replace('%gameString%', gameString) + '</div>').dialog(
+                                    {
+                                        modal : true,
+                                        title : 'Save / Restore game',
+                                        dialogClass : 'ssmenu',
+                                        buttons : [{
+                                            text : 'restore',
+                                            click : function () {
+                                            var goodtogo = false;
+                                                var restorestring = $('#ssrestorestring').val();
+                                                if (restorestring != '') {
+                                                    try {
+                                                        var tmpArray = JSON.parse(restorestring.replace(/ /g, "\"").replace(/@/g," "));
+                                                        goodtogo = (tmpArray.length == 2 * 52);
+                                                    } catch (ex) {
+                                                        goodtogo = false;
+                                                    }
+                                                    if (goodtogo) {
+                                                        ssObj.moves = new Array();
+                                                        ssObj.deck = tmpArray;
+                                                        ssObj.score = 500;
+                                                        
+                                                        for (var stack = 0; stack < 23; stack++) {
+                                                            ssObj.piles[stack] = [];
+                                                        }
+                                                        
+                                                        // create deal stacks
+                                                        var stack = 0;
+                                                        for (stack = 0; stack < 5; stack++) {
+                                                            for (card = 0; card < 10; card++) {
+                                                                tmpArray[stack * 10 + card].facingUp = false;
+                                                                tmpArray[stack * 10 + card].canDrag = false;
+                                                                ssObj.piles[stack].push(tmpArray[stack * 10 + card]);
+                                                            }
+                                                        }
+                                        
+                                                        // create playing stacks (deal one card on each stack until all gone)
+                                                        card = 50;
+                                                        do {
+                                                            for (stack = 13; stack < 23; stack++) {
+                                                                tmpArray[card].facingUp = (card >= 94);
+                                                                ssObj.piles[stack].push(tmpArray[card]);
+                                                                card++;
+                                                                if (card >= 104) {
+                                                                    break;
+                                                                }
+                                                            }
+                                                        } while (card < 104);
+                                                        ssObj.playing = true;                                             
+                                                        ssObj.saveGame();
+                                                        ssObj.newGame(false);
+                                                    }
+                                                    $(this).dialog('destroy');
+                                                }
+                                            }
+                                        }], 
+                                        close : function () {
+                                            $(this).dialog('destroy');
+                                        }
+                                    });
+                                    $(this).dialog('destroy');
+                            },
+                            disabled : (!isNaN(theirScore))
                         },
                         {
                             text : 'close', 
                             click : function () {
-                                $(this).dialog('destroy');
-                                if (theirScore > 0) {
-                                    ssObj.newGame();
+                                if (ssObj.playerName == '') {
+                                    ssObj.playerName = $('#ssplayer').val();
+                                    for (var s = 0; s < ssObj.highScores.length; s++) {
+                                        if (ssObj.highScores[s].player == '') {
+                                            ssObj.highScores[s].player = ssObj.playerName;
+                                        }
+                                    }
                                 }
+                                $(this).dialog('destroy');
                             },
                             class : 'default-button'
                         }
@@ -721,12 +828,16 @@ jQuery(function($) {
             }
 
             if (spareHome == 13) {
+                ssObj.statPlayed++;
+                ssObj.statWon++;
                 ssObj.displayScore();
                 ssObj.playing = false;
-                ssObj.moves = [];
                 ssObj.highScoreCheck();
-                ssObj.saveGame();
+                ssObj.saveGame(); //save highscore change                
                 ssObj.showMenu(ssObj.score);
+                return false;
+            } else {
+                return true; //still playing
             }
         };
 
@@ -755,7 +866,7 @@ jQuery(function($) {
                                         });
             }
             ssObj.highScores = JSON.parse(JSON.stringify(ssObj.highScores)); // ensures dates are in UTC format for displaying
-        };
+       };
 
 
         // find the pile that a card has been dropped on
@@ -869,12 +980,16 @@ jQuery(function($) {
         this.saveGame = function () {
             if (ssObj.usingstorage) {
                 try {
-                    localStorage.setItem('spidersolitaireMoves', JSON.stringify(ssObj.moves));
-                    localStorage.setItem('spidersolitairePiles', JSON.stringify(ssObj.piles));
-                    localStorage.setItem('spidersolitaireDeck', JSON.stringify(ssObj.deck));
-                    localStorage.setItem('spidersolitaireScore', JSON.stringify(ssObj.score));
+                    if (ssObj.playing) {
+                        localStorage.setItem('spidersolitaireMoves', JSON.stringify(ssObj.moves));
+                        localStorage.setItem('spidersolitairePiles', JSON.stringify(ssObj.piles));
+                        localStorage.setItem('spidersolitaireDeck', JSON.stringify(ssObj.deck));
+                        localStorage.setItem('spidersolitaireScore', JSON.stringify(ssObj.score));
+                    }
                     localStorage.setItem('spidersolitaireHighScores', JSON.stringify(ssObj.highScores));
                     localStorage.setItem('spidersolitairePlayerName', JSON.stringify(ssObj.playerName));
+                    localStorage.setItem('spidersolitairePlayed', JSON.stringify(ssObj.statPlayed));
+                    localStorage.setItem('spidersolitaireWon', JSON.stringify(ssObj.statWon));
                 } catch (ex) {
                     // just catch
                 }
@@ -893,6 +1008,8 @@ jQuery(function($) {
                 ssObj.piles = ssObj.readStorage(localStorage.spidersolitairePiles, 'array');
                 ssObj.moves = ssObj.readStorage(localStorage.spidersolitaireMoves, 'array');
                 ssObj.score = ssObj.readStorage(localStorage.spidersolitaireScore, 'number');
+                ssObj.statPlayed = ssObj.readStorage(localStorage.spidersolitairePlayed, 'number');
+                ssObj.statWon = ssObj.readStorage(localStorage.spidersolitaireWon, 'number');
                 return ((ssObj.piles.length == 23));
             } else if (!(document.cookie.indexOf('nostorage') > -1)) {
                 document.cookie = 'nostorage=true';
@@ -919,7 +1036,7 @@ jQuery(function($) {
         };
 
 
-        // read the game from localStorage (if supported)
+        // delete the game from localStorage (if supported)
         this.forgetGame = function () {
             if (ssObj.usingstorage) {
                 try {
@@ -1031,13 +1148,19 @@ jQuery(function($) {
                 'score' :
                     '<tr class="%highlight%"><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
                 'menu' :
-                    '<div class="menu">%congratulate%The top 10 high scores are:<br>' +
+                    '<div class="menu">%congratulate%Your have played %played% games and won %won%<br>(so currently %percent%%)<br><br>The top 10 high scores are:<br>' +
                     '<table class="ssscores"><tr><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>' +
                     '<label for="ssplayer">Your name:&nbsp;</label><input type="text" id="ssplayer" value="%player%">',
                 'congrats' :
-                    'Congratulations, you have finished and your score is %score%<br>',
+                    'Congratulations, you have finished and your score is %score%<br><br>',
                 'confirmNew' :
-                    'You are in the middle of a game, are you sure?'
+                    'You are in the middle of a game, are you sure?',
+                'saveRestore' :
+                    '<div class="ssSaveRestore">' +
+                    '<textarea id="ssrestorestring">%gameString%</textarea><br>' +
+                    '<b>To save:</b> Carefully copy the contents of this box (ctrl-A, ctrl-C) to a text file then close this dialog<br>' +
+                    '<b>To restore:</b> Paste a previously saved string (ctrl-A, ctrl-V) over this value and click the Restore button' +
+                    '</div>'
             };
             return templates[templateName];
         };
