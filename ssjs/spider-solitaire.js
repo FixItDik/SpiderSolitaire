@@ -44,6 +44,8 @@ jQuery(function($) {
         ssObj.scoresToKeep = 10;
         ssObj.score = 500;
         ssObj.moveCount = 0;
+        ssObj.howManySuits = 4;
+        ssObj.howManySuitsNext = 4;
         
         // these are used to calculate card spacing in tall piles
         // using variables so you can change card dimensions etc if you want
@@ -310,11 +312,6 @@ jQuery(function($) {
 
         // shuffle cards
         this.prepareCards = function (forgetOld) {
-            var pos = 0;
-            var suits = ['c', 'd', 'h', 's'];
-            var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-            var pile = [];
-            
             if (!forgetOld && ssObj.readGame()) {
                 // there's an ongoing game so load it
 
@@ -326,12 +323,36 @@ jQuery(function($) {
                     }
                 }
                 $('#Deal').prop('disabled', eval(stack == -1));
+                
+                ssObj.howManySuits = ssObj.howManySuitsNext = ssObj.countSuits();
 
                 ssObj.playing = (ssObj.piles[0].length != 13); // may have loaded a completed game
 
                 $('#Undo').prop('disabled', (!ssObj.playing || (ssObj.moves.length == 0)));
 
             } else {
+                // new game so set it all up
+                var pos = 0;
+                var suits = ['c', 'd', 'h', 's'];
+                ssObj.howManySuits = ssObj.howManySuitsNext;
+                if (ssObj.howManySuits == 2) {
+                    //pick a red
+                    var red = (Math.random() < 0.5) ? 'd' : 'h';
+                    var black = (Math.random() < 0.5) ? 'c' : 's';
+                    suits[0] = black;
+                    suits[1] = red;
+                    suits[2] = red;
+                    suits[3] = black; 
+                } else if (ssObj.howManySuits == 1) {
+                    var suit = suits[Math.floor(Math.random() * 4)];
+                    suits[0] = suit;
+                    suits[1] = suit;
+                    suits[2] = suit;
+                    suits[3] = suit; 
+                }
+                var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+                var pile = [];
+                
                 // make sure we clear any previous game
                 ssObj.forgetGame();
                 
@@ -576,16 +597,24 @@ jQuery(function($) {
             tmpPercent = isNaN(tmpPercent) ? 0 : tmpPercent.toFixed(2);
             var tmp = '';
             var congrats = '';
+            var currentLevel = ssObj.howManySuits;
             if (!isNaN(theirScore)) {
-                congrats = ssObj.getTemplate('congrats').replace('%score%', theirScore);
+                congrats = ssObj.getTemplate('congrats').replace('%score%', theirScore);              
                 ssObj.newGame();
             }
             for (var index=0; index < ssObj.highScores.length; index++) {
+                if (ssObj.highScores[index].level === undefined) {
+                    ssObj.highScores[index].level = 4; // from previous version where there were no levels
+                }
                 var highlight = '';
-                if (!isNaN(theirScore) && (ssObj.highScores[index].score == theirScore) && (('' + ssObj.highScores[index].date).substr(0,10) == JSON.parse(JSON.stringify(new Date())).substr(0,10))) {
+                if (!isNaN(theirScore) 
+                    && (ssObj.highScores[index].score == theirScore) 
+                    && (ssObj.highScores[index].level == currentLevel)
+                    && (('' + ssObj.highScores[index].date).substr(0,10) == JSON.parse(JSON.stringify(new Date())).substr(0,10))) {
                     highlight = 'highlight';
                 }
-                tmp += scores.replace('%score%', ssObj.highScores[index].score)
+                tmp += scores.replace('%level%', ssObj.highScores[index].level)
+                            .replace('%score%', ssObj.highScores[index].score)
                             .replace('%date%', ('' + ssObj.highScores[index].date).substr(0,10))
                             .replace('%name%', ssObj.highScores[index].player)
                             .replace('%highlight%', highlight);
@@ -596,6 +625,8 @@ jQuery(function($) {
                 .replace('%won%', ssObj.statWon)
                 .replace('%percent%', tmpPercent)
                 .replace('%scores%', tmp)
+                .replace('%level%', ssObj.howManySuitsNext)
+                .replace('%level%', ssObj.howManySuitsNext)
                 .replace('%congratulate%', congrats) + '</div>').dialog(
                 {
                     modal : true, 
@@ -612,6 +643,10 @@ jQuery(function($) {
                                     }
                                 }
                                 ssObj.saveGame();
+                                ssObj.howManySuitsNext = $('#sslevel').val();
+                                if (!ssObj.playing && (ssObj.howManySuits != ssObj.howManySuitsNext)) {
+                                    ssObj.newGame(true);
+                                }
                                 $(this).dialog('destroy');
                             }
                         },
@@ -626,6 +661,10 @@ jQuery(function($) {
                                     localStorage.removeItem('spidersolitaireHighScores');
                                 } catch (ex) {}
                                 ssObj.saveGame();
+                                ssObj.howManySuitsNext = $('#sslevel').val();
+                                if (!ssObj.playing && (ssObj.howManySuits != ssObj.howManySuitsNext)) {
+                                    ssObj.newGame(true);
+                                }
                                 $(this).dialog('destroy');
                             }
                         },
@@ -643,7 +682,7 @@ jQuery(function($) {
                                         buttons : [{
                                             text : 'restore',
                                             click : function () {
-                                            var goodtogo = false;
+                                                var goodtogo = false;
                                                 var restorestring = $('#ssrestorestring').val();
                                                 if (restorestring != '') {
                                                     try {
@@ -685,6 +724,8 @@ jQuery(function($) {
                                                         } while (card < 104);
                                                         ssObj.playing = true;                                             
                                                         ssObj.saveGame();
+                                                        // work out how many suits before calling newGame}
+                                                        ssObj.howManySuits = ssObj.countSuits();
                                                         ssObj.newGame(false);
                                                     }
                                                     $(this).dialog('destroy');
@@ -692,6 +733,10 @@ jQuery(function($) {
                                             }
                                         }], 
                                         close : function () {
+                                            ssObj.howManySuitsNext = $('#sslevel').val();
+                                            if (!ssObj.playing && (ssObj.howManySuits != ssObj.howManySuitsNext)) {
+                                                ssObj.newGame(true);
+                                            }
                                             $(this).dialog('destroy');
                                         }
                                     });
@@ -709,6 +754,10 @@ jQuery(function($) {
                                             ssObj.highScores[s].player = ssObj.playerName;
                                         }
                                     }
+                                }
+                                ssObj.howManySuitsNext = $('#sslevel').val();
+                                if (!ssObj.playing && (ssObj.howManySuits != ssObj.howManySuitsNext)) {
+                                    ssObj.newGame(true);
                                 }
                                 $(this).dialog('destroy');
                             },
@@ -846,9 +895,14 @@ jQuery(function($) {
         this.highScoreCheck = function () {
             var index;
             for (index = 0; index < ssObj.highScores.length; index++) {
+                if (ssObj.highScores[index].level === undefined) {
+                    ssObj.highScores[index].level = 4; // from previous version where there were no levels, always 4 suits
+                }
                 var highScore = ssObj.highScores[index];
-                if (highScore.score < ssObj.score) {
-                    ssObj.highScores.splice(index, 0, { score: ssObj.score,
+                if ((highScore.level < ssObj.howManySuits)
+                    || ((highScore.level == ssObj.howManySuits) && (highScore.score < ssObj.score))) {
+                    ssObj.highScores.splice(index, 0, { level: ssObj.howManySuits,
+                                    score: ssObj.score,
                                     date: new Date(),
                                     player: ssObj.playerName
                                     });
@@ -860,7 +914,8 @@ jQuery(function($) {
             }
             
             if (index == ssObj.highScores.length && ssObj.highScores.length < ssObj.scoresToKeep) {
-                ssObj.highScores.push({ score: ssObj.score,
+                ssObj.highScores.push({ level: ssObj.howManySuits,
+                                        score: ssObj.score,
                                         date: new Date(),
                                         player: ssObj.playerName
                                         });
@@ -1109,13 +1164,24 @@ jQuery(function($) {
         };
 
 
-
         // custom exception to give notice to user
         this.Exception = function(message) {
             ssObj.alert(message);
             this.message = message;
             this.name = "Fatal SpiderSolitaire error";
         };
+
+
+        // count suits in current deck
+        this.countSuits = function() {
+            var tmpSuits = '';
+            for (card = 0; card < ssObj.deck.length; card++) {
+                if (!tmpSuits.includes(ssObj.deck[card].suit)) {
+                    tmpSuits += ssObj.deck[card].suit;
+                }
+            }
+            return tmpSuits.length;        
+        }
 
 
         // return appropriate HTML template for elements of game
@@ -1146,11 +1212,13 @@ jQuery(function($) {
                 'home-base' :
                     '<div id="home_%id%" class="base home" style="z-index:0;"/>',
                 'score' :
-                    '<tr class="%highlight%"><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
+                    '<tr class="%highlight%"><td>%level%</td><td>%score%</td><td>%date%</td><td>%name%</td></tr>',
                 'menu' :
                     '<div class="menu">%congratulate%Your have played %played% games and won %won%<br>(so currently %percent%%)<br><br>The top 10 high scores are:<br>' +
-                    '<table class="ssscores"><tr><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>' +
-                    '<label for="ssplayer">Your name:&nbsp;</label><input type="text" id="ssplayer" value="%player%">',
+                    '<table class="ssscores"><tr><th>Suits</th><th>Score</th><th>Date</th><th>Name</th></tr>%scores%</table></div>' +
+                    '<label for="ssplayer">Your name:&nbsp;</label><input type="text" id="ssplayer" value="%player%">' +
+                    '<label for="sslevel">Level of next game:&nbsp;</label><select id="sslevel"><option selected value="%level%">%level% suits</option>' +
+                    '<option value="4">4 suits</option><option value="2">2 suits</option><option value="1">1 suit</option></select>',
                 'congrats' :
                     'Congratulations, you have finished and your score is %score%<br><br>',
                 'confirmNew' :
