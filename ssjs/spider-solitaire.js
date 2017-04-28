@@ -175,7 +175,7 @@ jQuery(function($) {
             });
             
             // detect right-click and show card face in full
-            ssDiv.on('mousedown', '.faceup.canDrop', function (event) {
+            ssDiv.on('mousedown', '.card.faceup', function (event) {
                 if (event.button == 2) {
                     this.style.zIndex = '999';
                     event.preventDefault();
@@ -184,7 +184,7 @@ jQuery(function($) {
             });
             
             // detect release of right-click and put card back
-            ssDiv.on('mouseup', '.faceup.canDrop', function (event) {
+            ssDiv.on('mouseup', '.card.faceup', function (event) {
                 if (event.button == 2) {
                     this.style.zIndex = '200';
                     event.preventDefault();
@@ -193,7 +193,7 @@ jQuery(function($) {
             });
 
             // and prevent the default (context menu) action
-            ssDiv.on('contextmenu', '.faceup.canDrop', function (event) {
+            ssDiv.on('contextmenu', '.card', function (event) {
                 event.preventDefault();
                 event.stopPropagation();
             });
@@ -221,8 +221,9 @@ jQuery(function($) {
         }
 
         // start a new game
-        this.newGame = function (forgetOld = true) {
+        this.newGame = function (forgetOld) {
             // re-initialise the basic parts of a game
+            if (forgetOld == undefined) forgetOld = true;
 
             ssObj.moves = [];
             ssObj.piles = [];
@@ -452,6 +453,7 @@ jQuery(function($) {
                     var card = ssObj.piles[stack].pop();
                     card.facingUp = true;
                     $('#' + card.id).css('background-image', 'url(ssimages/card_' + card.suit + card.value + '.gif)');
+                    $('#' + card.id).addClass('canDrop');
                     $('#' + card.id).addClass('faceup');
                     ssObj.piles[13 + count].push(card);
                     $('#base_' + count).append($('#' + card.id));
@@ -653,14 +655,8 @@ jQuery(function($) {
                         {
                             text : 'reset scores',
                             click : function () {
+                                ssObj.confirm('Are you sure you want to forget the high scores?', ssObj.resetHighScores);
                                 ssObj.playerName = $('#ssplayer').val();
-                                ssObj.highScores = [];
-                                ssObj.statPlayed = 0;
-                                ssObj.statWon = 0;
-                                try {
-                                    localStorage.removeItem('spidersolitaireHighScores');
-                                } catch (ex) {}
-                                ssObj.saveGame();
                                 ssObj.howManySuitsNext = $('#sslevel').val();
                                 if (!ssObj.playing && (ssObj.howManySuits != ssObj.howManySuitsNext)) {
                                     ssObj.newGame(true);
@@ -1107,11 +1103,14 @@ jQuery(function($) {
 
 
         // reset the remembered high scores
-        this.resetHighScores = function (newName) {
+        this.resetHighScores = function () {
             ssObj.highScores = [];
+            ssObj.statPlayed = 0;
+            ssObj.statWon = 0;
             try {
                 localStorage.removeItem('spidersolitaireHighScores');
             } catch (ex) {}
+            ssObj.saveGame();
         };
 
 
